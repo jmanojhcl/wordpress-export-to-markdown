@@ -26,7 +26,7 @@ async function processPayloadsPromise(payloads, loadFunc) {
 			}
 		}, payload.delay);
 	}));
-	
+
 	const results = await Promise.allSettled(promises);
 	const failedCount = results.filter(result => result.status === 'rejected').length;
 	if (failedCount === 0) {
@@ -41,7 +41,7 @@ async function writeFile(destinationPath, data) {
 	await fs.promises.writeFile(destinationPath, data);
 }
 
-async function writeMarkdownFilesPromise(posts, config ) {
+async function writeMarkdownFilesPromise(posts, config) {
 	// package up posts into payloads
 	let skipCount = 0;
 	let delay = 0;
@@ -85,7 +85,9 @@ async function loadMarkdownFilePromise(post) {
 		} else {
 			// single string value
 			const escapedValue = (value || '').replace(/"/g, '\\"');
-			outputValue = `"${escapedValue}"`;
+			if (escapedValue.length > 0) {
+				outputValue = `"${escapedValue}"`;
+			}
 		}
 
 		if (outputValue !== undefined) {
@@ -144,7 +146,8 @@ async function loadImageFilePromise(imageUrl) {
 			encoding: null, // preserves binary encoding
 			headers: {
 				'User-Agent': 'wordpress-export-to-markdown'
-			}
+			},
+			strictSSL: settings.strict_ssl
 		});
 	} catch (ex) {
 		if (ex.name === 'StatusCodeError') {
@@ -157,7 +160,12 @@ async function loadImageFilePromise(imageUrl) {
 }
 
 function getPostPath(post, config) {
-	const dt = luxon.DateTime.fromISO(post.frontmatter.date);
+	let dt;
+	if (settings.custom_date_formatting) {
+		dt = luxon.DateTime.fromFormat(post.frontmatter.date, settings.custom_date_formatting);
+	} else {
+		dt = luxon.DateTime.fromISO(post.frontmatter.date);
+	}
 
 	// start with base output dir
 	const pathSegments = [config.output];
